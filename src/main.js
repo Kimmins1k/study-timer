@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, nativeImage, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage, powerMonitor, screen } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { fmt, totalsByDay, dayKey } = require('./sessions');
@@ -24,6 +24,7 @@ function save() {
 }
 
 let win;
+let widget;
 let running = false;
 let quitting = false;
 let ticks = 0;
@@ -57,11 +58,28 @@ setInterval(() => {
     }
   }
   update();
+  // 작업 표시줄을 누르면 작업 표시줄이 위젯을 덮으므로 다시 맨 위로
+  if (widget) widget.moveTop();
 }, 1000);
+
+function showMain() {
+  win.restore();
+  win.show();
+  win.focus();
+}
+
+// 작업 표시줄(아래쪽) 왼쪽 빈 곳에 위젯을 놓는다
+function placeWidget() {
+  const { bounds: b, workArea: w } = screen.getPrimaryDisplay();
+  const tb = b.y + b.height - (w.y + w.height) || 48; // 자동 숨김이면 0이라 기본 높이 사용
+  const h = Math.min(tb - 8, 40);
+  widget.setBounds({ x: b.x + 12, y: b.y + b.height - tb + Math.round((tb - h) / 2), width: 136, height: h }); // 10:00:00까지 들어가는 폭
+}
 
 ipcMain.handle('state', () => ({ sessions, running, now: Date.now() }));
 ipcMain.on('toggle', toggle);
 ipcMain.on('quit', () => app.quit());
+ipcMain.on('open', showMain);
 ipcMain.on('icons', (e, ring, button) => {
   win.setIcon(nativeImage.createFromDataURL(ring));
   win.setThumbarButtons([{ tooltip: running ? '멈춤' : '시작', icon: nativeImage.createFromDataURL(button), click: toggle }]);
@@ -69,8 +87,7 @@ ipcMain.on('icons', (e, ring, button) => {
 
 app.on('second-instance', (e, argv) => {
   if (argv.includes('--quit')) return app.quit();
-  win.restore();
-  win.focus();
+  showMain();
 });
 
 app.on('before-quit', () => {
@@ -108,5 +125,21 @@ app.whenReady().then(() => {
       win.minimize();
     }
   });
+
+  widget = new BrowserWindow({
+    frame: false,
+    transparent: true,
+    resizable: false,
+    skipTaskbar: true,
+    focusable: false, // 눌러도 지금 쓰던 창에서 포커스를 뺏지 않게
+    hasShadow: false,
+    show: false,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), backgroundThrottling: false },
+  });
+  widget.setAlwaysOnTop(true, 'screen-saver');
+  widget.loadFile(path.join(__dirname, 'widget.html'));
+  placeWidget();
+  widget.once('ready-to-show', () => widget.showInactive());
+  screen.on('display-metrics-changed', placeWidget);
   update();
 });
