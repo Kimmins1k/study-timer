@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage, powerMonitor } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { fmt, totalsByDay, dayKey } = require('./sessions');
@@ -46,8 +46,15 @@ function toggle() {
 
 setInterval(() => {
   if (running) {
-    last().end = Date.now();
-    if (++ticks % 30 === 0) save(); // 갑자기 꺼져도 잃는 건 최대 30초
+    const now = Date.now();
+    // 1초마다 도는데 5초 넘게 비었으면 절전 등으로 멈췄던 것: 빈 시간은 빼고 멈춤
+    if (now - last().end > 5000) {
+      running = false;
+      save();
+    } else {
+      last().end = now;
+      if (++ticks % 30 === 0) save(); // 갑자기 꺼져도 잃는 건 최대 30초
+    }
   }
   update();
 }, 1000);
@@ -72,6 +79,11 @@ app.on('before-quit', () => {
 });
 
 app.whenReady().then(() => {
+  // 자리를 비운 시간이 공부 시간에 들어가지 않게 잠금·절전 때 멈춤 (풀려도 자동 재시작 안 함)
+  const pause = () => running && toggle();
+  powerMonitor.on('lock-screen', pause);
+  powerMonitor.on('suspend', pause);
+
   // 작업 표시줄 아이콘 우클릭 메뉴의 "종료"
   app.setUserTasks([{
     program: process.execPath,
