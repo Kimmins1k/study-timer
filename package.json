@@ -11,8 +11,7 @@
   "build": {
     "appId": "com.kimmins1k.studyringtimer",
     "files": ["src/**/*", "!src/*.test.js"],
-    "win": { "target": "portable", "signAndEditExecutable": false },
-    "portable": { "artifactName": "StudyRingTimer.exe" }
+    "win": { "target": "dir", "signAndEditExecutable": false }
   },
   "devDependencies": {
     "electron": "^45.4.1",
