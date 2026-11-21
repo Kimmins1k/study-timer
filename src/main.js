@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { fmt, totalsByDay, dayKey } = require('./sessions');
@@ -55,6 +55,10 @@ setInterval(() => {
 ipcMain.handle('state', () => ({ sessions, running, now: Date.now() }));
 ipcMain.on('toggle', toggle);
 ipcMain.on('quit', () => app.quit());
+ipcMain.on('icons', (e, ring, button) => {
+  win.setIcon(nativeImage.createFromDataURL(ring));
+  win.setThumbarButtons([{ tooltip: running ? '멈춤' : '시작', icon: nativeImage.createFromDataURL(button), click: toggle }]);
+});
 
 app.on('second-instance', (e, argv) => {
   if (argv.includes('--quit')) return app.quit();
