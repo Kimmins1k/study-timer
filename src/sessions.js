@@ -24,7 +24,7 @@ function splitAtMidnight(s) {
 
 // 해당 날짜(YYYY-MM-DD)에 속한 조각들
 function sessionsOfDay(sessions, key) {
-  return sessions.flatMap(splitAtMidnight).filter((p) => dayKey(p.start) === key);
+  return sessions.flatMap(splitAtMidnight).filter((p) => dayKey(p.start) === key).sort((a, b) => a.start - b.start);
 }
 
 function totalsByDay(sessions) {
