@@ -86,6 +86,7 @@ app.whenReady().then(() => {
 
   // 작업 표시줄 아이콘 우클릭 메뉴의 "종료"
   app.setUserTasks([{
+    // 포터블 exe라도 실행 중엔 풀린 exe를 직접 불러야 압축 풀기 없이 바로 꺼진다
     program: process.execPath,
     arguments: app.isPackaged ? '--quit' : `"${app.getAppPath()}" --quit`,
     title: '종료',

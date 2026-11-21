@@ -5,9 +5,17 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test"
+    "test": "node --test",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.kimmins1k.studyringtimer",
+    "files": ["src/**/*", "!src/*.test.js"],
+    "win": { "target": "portable", "signAndEditExecutable": false },
+    "portable": { "artifactName": "StudyRingTimer.exe" }
   },
   "devDependencies": {
-    "electron": "^45.4.1"
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
   }
 }
