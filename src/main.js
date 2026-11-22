@@ -19,8 +19,13 @@ try {
 }
 
 function save() {
-  fs.writeFileSync(file + '.tmp', JSON.stringify(sessions));
-  fs.renameSync(file + '.tmp', file);
+  try {
+    fs.writeFileSync(file + '.tmp', JSON.stringify(sessions));
+    fs.renameSync(file + '.tmp', file);
+  } catch (e) {
+    // 백신 등이 파일을 잠깐 잡고 있으면 실패할 수 있다. 기록은 메모리에 있으니 다음 저장 때 다시 시도
+    console.error('save failed', e);
+  }
 }
 
 let win;
@@ -33,7 +38,7 @@ const last = () => sessions[sessions.length - 1];
 const todayTotal = () => totalsByDay(sessions)[dayKey(Date.now())] || 0;
 
 function update() {
-  if (win) win.setTitle(`${running ? '공부 중' : '멈춤'} ${fmt(todayTotal())}`);
+  if (win && !win.isDestroyed()) win.setTitle(`${running ? '공부 중' : '멈춤'} ${fmt(todayTotal())}`);
 }
 
 function toggle() {
@@ -58,9 +63,10 @@ setInterval(() => {
     }
   }
   update();
-  // 작업 표시줄을 누르면 작업 표시줄이 위젯을 덮으므로 다시 맨 위로
-  if (widget) widget.moveTop();
 }, 1000);
+
+// 작업 표시줄을 누르면 작업 표시줄이 위젯을 덮으므로 금방 다시 맨 위로
+setInterval(() => widget && !widget.isDestroyed() && widget.moveTop(), 300);
 
 function showMain() {
   win.restore();
@@ -90,10 +96,11 @@ app.on('second-instance', (e, argv) => {
   showMain();
 });
 
-app.on('before-quit', () => {
+function beforeExit() {
   quitting = true;
   if (running) toggle();
-});
+}
+app.on('before-quit', beforeExit);
 
 app.whenReady().then(() => {
   // 자리를 비운 시간이 공부 시간에 들어가지 않게 잠금·절전 때 멈춤 (풀려도 자동 재시작 안 함)
@@ -125,6 +132,10 @@ app.whenReady().then(() => {
       win.minimize();
     }
   });
+  // Windows 종료·로그아웃 때는 before-quit이 오지 않는다. 저장하고 창 닫기를 막지 않는다
+  win.on('session-end', beforeExit);
+  // 어떤 이유로든 상세 창이 사라지면 위젯만 남은 반쪽 상태가 되므로 저장하고 종료
+  win.on('closed', () => app.quit());
 
   widget = new BrowserWindow({
     frame: false,
