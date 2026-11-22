@@ -3,6 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const { fmt, totalsByDay, dayKey } = require('./sessions');
 
+// 앱 이름(productName)이 바뀌어도 기록 폴더는 그대로 쓰도록 고정
+app.setPath('userData', path.join(app.getPath('appData'), 'study-ring-timer'));
+
 // 두 개가 동시에 돌면 시간이 두 번 기록되므로 하나만 허용
 if (!app.requestSingleInstanceLock() || process.argv.includes('--quit')) {
   app.quit();
